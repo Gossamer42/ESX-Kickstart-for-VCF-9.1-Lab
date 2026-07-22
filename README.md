@@ -3,7 +3,7 @@ Kickstart ESX Installation for VSAN and Memory Tiering
 
 # ESXi 9.x / VCF 9.1 Homelab Cluster Kickstart Blueprint
 
-This repository provides an automated, variablized, and repeatable bare-metal provisioning blueprint for VMware ESXi 9.x / VMware Cloud Foundation (VCF) 9.1. It is tailored specifically for deploying reliable, fast, enterprise-grade virtualization clusters on consumer workstation architectures, including small-form-factor AMD Ryzen nodes.
+This repository provides an automated, variablized, and repeatable bare-metal provisioning blueprint for VMware ESXi 9.x Hosts designed for VMware Cloud Foundation (VCF) 9.1. It is tailored specifically for deploying reliable, fast, virtualization clusters on consumer workstation architectures, including small-form-factor AMD Ryzen nodes.
 
 ## 🤝 Project Credits & Acknowledgement
 
@@ -12,7 +12,7 @@ This deployment template is designed to natively complement the excellent [VMwar
 While William's automation excels at orchestrating the virtualized management environment components, this repository streamlines physical node readiness. It delivers a highly modular, single-pane user configuration interface to easily "repave" hardware platforms, forcing absolute compliance even if drives contain active local partitions or stubborn cluster flags.
 
 ### Integrated Enhancements
-This solution standardizes and bakes several consumer hardware optimizations and cluster performance properties directly into a touchless Kickstart routine, including:
+This solution incorporates the consumer hardware optimizations and cluster performance properties from William's sample KS-ESXxx.CFG Files directly into a touchless Kickstart routine, including:
 - **AMD Ryzen System Stability Tuning:** Implements vital hypervisor core configurations (`disable_apichv = "TRUE"`) to avoid hardware-level scheduling deadlocks.
 - **vSAN ESA Mock Hardware Integration:** Automatically pulls, registers, and provisions William Lam's custom `nested-vsan-esa-mock-hw.vib` repository packages to bypass consumer NVMe storage abstraction boundaries.
 - **Low-Level Platform Overrides:** Injects automated CPUID brand masking strings (`cpuid.brandstring = "AMD EPYC Ryzen 9 9955HX"`) to ensure nested infrastructure layers like NSX Edges initialize flawlessly on non-EPYC architectures.
