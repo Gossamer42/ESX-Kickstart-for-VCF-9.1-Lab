@@ -1,128 +1,76 @@
 # ESX-Kickstart-for-VCF-9.1-Lab
 Kickstart ESX Installation for VSAN and Memory Tiering
 
-vmaccepteula
-# Dynamically include the installation layout generated below by the %pre script
-%include /tmp/installation_commands.cfg
+# ESXi 9.x / VCF 9.1 Homelab Cluster Kickstart Blueprint
 
-# =========================================================
-# PRE-INSTALLATION GENERATION & DISK WIPE
-# =========================================================
-%pre --interpreter=busybox
+This repository provides an automated, variablized, and repeatable bare-metal provisioning blueprint for VMware ESXi 9.x / VMware Cloud Foundation (VCF) 9.1. It is tailored specifically for deploying reliable, fast, enterprise-grade virtualization clusters on consumer workstation architectures, including small-form-factor AMD Ryzen nodes.
 
-# ---------------------------------------------------------
-# [!] USER CONFIGURATION BLOCK - ONLY CHANGE THESE FIELDS [!]
-# ---------------------------------------------------------
-BOOT_DISK="t10.NVMe____GENERIC_BOOT_DISK_ID________________________0000000000000000"
-VSAN_DISK="t10.NVMe____GENERIC_VSAN_DISK_ID________________________0000000000000000"
-TIERING_DISK="t10.NVMe____GENERIC_TIERING_DISK_ID_____________________0000000000000000"
+## 🤝 Project Credits & Acknowledgement
 
-MANAGEMENT_IP="10.0.0.10"
-NETMASK="255.255.255.0"
-GATEWAY="10.0.0.1"
-NAMESERVER="10.0.0.2"
-HOSTNAME="esxi-host.local.lan"
-DATASTORE_NAME="local-vmfs-datastore-01"
-NTP_SERVER_IP="10.0.0.3"
+This deployment template is designed to natively complement the excellent [VMware Cloud Foundation (VCF) 9.1 in a Box](https://github.com) project developed by **William Lam**. 
 
-V_MNIC="vmnic0"
-MANAGEMENT_VLAN="10"
-MANAGEMENT_VSWITCH_MTU="9000"
-# ---------------------------------------------------------
+While William's automation excels at orchestrating the virtualized management environment components, this repository streamlines physical node readiness. It delivers a highly modular, single-pane user configuration interface to easily "repave" hardware platforms, forcing absolute compliance even if drives contain active local partitions or stubborn cluster flags.
 
-# 1. Dynamically write out the main installation track using the variables
-echo "clearpart --drives=${BOOT_DISK} --overwritevmfs" > /tmp/installation_commands.cfg
-echo "install --disk=${BOOT_DISK} --overwritevmfs" >> /tmp/installation_commands.cfg
-echo "network --bootproto=static --device=${V_MNIC} --vlanid=${MANAGEMENT_VLAN} --ip=${MANAGEMENT_IP} --netmask=${NETMASK} --gateway=${GATEWAY} --hostname=${HOSTNAME} --nameserver=${NAMESERVER} --addvmportgroup=1" >> /tmp/installation_commands.cfg
-echo "rootpw VMware1!" >> /tmp/installation_commands.cfg
-echo "reboot" >> /tmp/installation_commands.cfg
+### Integrated Enhancements
+This solution standardizes and bakes several consumer hardware optimizations and cluster performance properties directly into a touchless Kickstart routine, including:
+- **AMD Ryzen System Stability Tuning:** Implements vital hypervisor core configurations (`disable_apichv = "TRUE"`) to avoid hardware-level scheduling deadlocks.
+- **vSAN ESA Mock Hardware Integration:** Automatically pulls, registers, and provisions William Lam's custom `nested-vsan-esa-mock-hw.vib` repository packages to bypass consumer NVMe storage abstraction boundaries.
+- **Low-Level Platform Overrides:** Injects automated CPUID brand masking strings (`cpuid.brandstring = "AMD EPYC Ryzen 9 9955HX"`) to ensure nested infrastructure layers like NSX Edges initialize flawlessly on non-EPYC architectures.
+- **Advanced Resource Management Optimizations:** Sets enterprise memory sharing (`ShareForceSalting`) and vSAN I/O traffic throttles (`DOMNetworkSchedulerThrottleComponent`) for small labs.
 
-# 2. Clear partition structures to ensure a blank slate for vSAN and Tiering
-partedUtil mklabel /dev/disks/${VSAN_DISK} gpt || true
-partedUtil mklabel /dev/disks/${TIERING_DISK} gpt || true
+---
 
-# 3. Wipe underlying metadata tracks to destroy stubborn legacy storage headers
-dd if=/dev/zero of=/dev/disks/${VSAN_DISK} bs=1M count=100 || true
-dd if=/dev/zero of=/dev/disks/${TIERING_DISK} bs=1M count=100 || true
+## 📁 Repository Structure
 
-# 4. Save variables to a temporary file for the %firstboot stage to read later
-echo "NVME_TIERING_DEVICE=\"${TIERING_DISK}\"" > /tmp/ks_vars.sh
-echo "VMFS_DATASTORE_NAME=\"${DATASTORE_NAME}\"" >> /tmp/ks_vars.sh
-echo "NTP_SERVER=\"${NTP_SERVER_IP}\"" >> /tmp/ks_vars.sh
-echo "MANAGEMENT_VLAN=\"${MANAGEMENT_VLAN}\"" >> /tmp/ks_vars.sh
-echo "MANAGEMENT_VSWITCH_MTU=\"${MANAGEMENT_VSWITCH_MTU}\"" >> /tmp/ks_vars.sh
+- [`KS.cfg`](./KS.cfg) — The production installation script featuring a centralized variable block.
+- [`harvest.cfg`](./harvest.cfg) — Non-destructive deployment discovery engine to gather raw NVMe device tracking variables.
 
+---
 
-# =========================================================
-# FIRSTBOOT POST-INSTALLATION SCRIPTING
-# =========================================================
-%firstboot --interpreter=busybox
+## 🔍 Step 1: Device Harvesting (Before Installation)
 
-# Load the environmental variables generated during the %pre section
-. /tmp/ks_vars.sh
+When configuring a host, the main installation script requires the exact hardware serial tracking strings of your NVMe drives. To gather these cleanly without risking data loss, use the non-destructive discovery loop.
 
-SSH_ROOT_KEY=""
+1. Download [`harvest.cfg`](./harvest.cfg) and place it on your bootable deployment media or network share.
+2. Connect an Ethernet cable from a temporary DHCP network switch directly into one of the native onboard **RJ45 1G/2.5G copper ports** (`vmnic0`) on the host. 
+3. Boot the machine using the discovery configuration (e.g., passing `ks=usb:/harvest.cfg` at the boot loader).
+4. The system will load the installer into RAM and halt permanently at a blank screen. Check your network DHCP lease table to find the temporary IP address the host pulled.
+5. Open a terminal on your workstation and SSH into the live installer environment:
+   ```bash
+   ssh root@<THE_DHCP_IP_ADDRESS>
+   ```
+6. Authenticate using the temporary password: `VMware1!`. Run either of these commands to dump your raw storage identifiers directly out of the micro-kernel abstraction layer:
+   ```bash
+   # Approach A: Target device nodes directly
+   ls -l /dev/disks/
 
-# Ensure hostd agent is fully ready
-while ! vim-cmd hostsvc/runtimeinfo; do 
-    sleep 10
-done
+   # Approach B: Engine driver bypass query
+   localcli storage core device list | grep -E "Display Name:|Devfs Path:"
+   ```
+7. Copy and record the unique strings starting with `t10.NVMe...` for your **Boot Drive**, **vSAN Drive**, and **Memory Tiering Drive**. You can now power down the host.
 
-# Enable & start management shells
-vim-cmd hostsvc/enable_ssh
-vim-cmd hostsvc/start_ssh
-vim-cmd hostsvc/enable_esx_shell
-vim-cmd hostsvc/start_esx_shell
+---
 
-# Suppress ESXi Shell warnings
-esxcli system settings advanced set -o /UserVars/SuppressShellWarning -i 1
+## 🔧 Step 2: Production Deployment Configuration
 
-# Configure NTP
-esxcli system ntp set -e true -s $NTP_SERVER
+Once you have recorded your device IDs, you can execute your production deployment.
 
-# Rename local VMFS datastore
-vim-cmd hostsvc/datastore/rename datastore1 ${VMFS_DATASTORE_NAME}
+1. Download [`KS.cfg`](./KS.cfg).
+2. Open the file in a text editor and fill out the centralized **User Configuration Block** located right at the top of the script (Lines 10–23):
+   ```text
+   BOOT_DISK="t10.NVMe____YOUR_BOOT_DISK_ID..."
+   VSAN_DISK="t10.NVMe____YOUR_VSAN_DISK_ID..."
+   TIERING_DISK="t10.NVMe____YOUR_TIERING_DISK_ID..."
+   
+   MANAGEMENT_IP="10.0.10.110"
+   GATEWAY="10.0.10.1"
+   ...
+   ```
+3. Re-connect your high-speed SFP+ or breakout network infrastructure cabling to the host.
+4. Boot the machine from your modified production script (e.g., `ks=usb:/KS.cfg`). The script will automatically clean stale partitions, deploy the OS, configure static networking, clear sticky metadata flags, and bind your memory tier natively via the correct ESXi 9.x `esxcli memtier` API.
 
-# MODERN ESXi 9.x / VCF 9.1 NVMe TIERING INITIALIZATION
-# Put host into maintenance mode to release memory manager locks
-esxcli system maintenanceMode set --enable true
+## 🛠️ Post-Installation Verification Checklist
 
-# Register the tier device via the proper, updated modern namespace
-esxcli memtier enable -d /vmfs/devices/disks/${NVME_TIERING_DEVICE}
-
-# Take host out of maintenance mode to finalize the memory expansion
-esxcli system maintenanceMode set --enable false
-
-# Generate security certificates
-/bin/generate-certificates
-
-# Workaround required for AMD Ryzen-based CPU stability
-echo 'monitor_control.disable_apichv ="TRUE"' >> /etc/vmware/config
-
-# Install vSAN ESA Mock VIB
-esxcli network firewall ruleset set -e true -r httpClient
-esxcli software acceptance set --level CommunitySupported
-esxcli software vib install -v https://github.com --no-sig-check
-esxcli network firewall ruleset set -e false -r httpClient
-
-# Configure SSH keys if provided
-if [ -n "${SSH_ROOT_KEY}" ]; then
-    echo "${SSH_ROOT_KEY}" > /etc/ssh/keys-root/authorized_keys
-fi
-
-# Memory Management Optimizations
-esxcli system settings advanced set -o /Mem/ShareForceSalting -i 0
-esxcli system settings advanced set -o /Mem/AllocGuestLargePage -i 0
-
-# vSAN Subsystem Performance Tuning
-esxcli system settings advanced set -i 1 -o /VSAN/DOMNetworkSchedulerThrottleComponent
-
-# NSX Edge architecture brand override for consumer hardware
-echo 'cpuid.brandstring = "AMD EPYC Ryzen 9 9955HX"' >> /etc/vmware/config
-
-# Configure VM Network Management VLAN & Port MTU sizes
-esxcli network vswitch standard portgroup set -p "VM Network" -v ${MANAGEMENT_VLAN}
-esxcli network vswitch standard set -m ${MANAGEMENT_VSWITCH_MTU} -v vSwitch0
-
-# Final system reload to commit environment variables
-reboot
+Once the automated deployment script triggers its final system reload sequence, verify cluster functionality:
+- Log into your central vCenter environment and verify that total capacity reflects your expanded Pooled Memory Footprint (DRAM + NVMe Tier).
+- Confirm that the targeted vSAN capacity drives have successfully formed pristine storage disk pools via the community-supported virtual environment drivers.
