@@ -11,7 +11,7 @@ This deployment template is designed to natively complement the excellent [VMwar
 
 While William's automation excels at orchestrating the virtualized management environment components, this repository streamlines physical node readiness. It delivers a highly modular, single-pane user configuration interface to easily "repave" hardware platforms, forcing absolute compliance even if drives contain active local partitions or stubborn cluster flags.
 
-### Integrated Enhancements
+### Included Enhancements from William Lam's Guides
 This solution incorporates the consumer hardware optimizations and cluster performance properties from William's sample KS-ESXxx.CFG Files directly into a touchless Kickstart routine, including:
 - **AMD Ryzen System Stability Tuning:** Implements vital hypervisor core configurations (`disable_apichv = "TRUE"`) to avoid hardware-level scheduling deadlocks.
 - **vSAN ESA Mock Hardware Integration:** Automatically pulls, registers, and provisions William Lam's custom `nested-vsan-esa-mock-hw.vib` repository packages to bypass consumer NVMe storage abstraction boundaries.
