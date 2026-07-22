@@ -62,9 +62,17 @@ Once you have recorded your device IDs, you can execute your production deployme
    VSAN_DISK="t10.NVMe____YOUR_VSAN_DISK_ID..."
    TIERING_DISK="t10.NVMe____YOUR_TIERING_DISK_ID..."
    
-   MANAGEMENT_IP="10.0.10.110"
-   GATEWAY="10.0.10.1"
-   ...
+   MANAGEMENT_IP="10.0.0.10"
+   NETMASK="255.255.255.0"
+   GATEWAY="10.0.0.1"
+   NAMESERVER="10.0.0.2"
+   HOSTNAME="esxi-host.local.lan"
+   DATASTORE_NAME="local-vmfs-datastore-01"
+   NTP_SERVER_IP="10.0.0.3"
+
+   V_MNIC="vmnic0"
+   MANAGEMENT_VLAN="10"
+   MANAGEMENT_VSWITCH_MTU="9000"
    ```
 3. Re-connect your high-speed SFP+ or breakout network infrastructure cabling to the host.
 4. Boot the machine from your modified production script (e.g., `ks=usb:/KS.cfg`). The script will automatically clean stale partitions, deploy the OS, configure static networking, clear sticky metadata flags, and bind your memory tier natively via the correct ESXi 9.x `esxcli memtier` API.
