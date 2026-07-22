@@ -1,4 +1,4 @@
-# ESX-Kickstart-for-VCF-9.1-Lab
+# ESX-Kickstart-for-Bare-Metal-VCF-9.1-Lab
 Kickstart ESX Installation for VSAN and Memory Tiering
 
 # ESXi 9.x / VCF 9.1 Homelab Cluster Kickstart Blueprint
