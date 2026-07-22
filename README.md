@@ -56,7 +56,7 @@ When configuring a host, the main installation script requires the exact hardwar
 Once you have recorded your device IDs, you can execute your production deployment.
 
 1. Download [`KS.cfg`](./KS.cfg).
-2. Open the file in a text editor and fill out the centralized **User Configuration Block** located right at the top of the script (Lines 10–23):
+2. Open the file in a text editor and fill out the centralized **User Configuration Block** located right at the top of the script (Lines 10–28):
    ```text
    BOOT_DISK="t10.NVMe____YOUR_BOOT_DISK_ID..."
    VSAN_DISK="t10.NVMe____YOUR_VSAN_DISK_ID..."
